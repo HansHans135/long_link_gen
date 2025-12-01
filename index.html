@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二進制編碼長連結產生器</title>
+    <link rel="icon" href="https://q2.qlogo.cn/headimg_dl?dst_uin=2726730791&spec=5">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CSP策略防止XSS攻击 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://q2.qlogo.cn; font-src 'self'; connect-src 'self'; object-src 'none'; media-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';">
+</head>
+<body class="min-h-screen bg-sky-500 py-8 px-4">
+    <div class="max-w-3xl mx-auto">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6">
+            <h1 class="text-3xl font-bold text-sky-600 text-center mb-8">🔗 二進制編碼長連結產生器</h1>
+            <form id="linkForm" class="space-y-5">
+                <div>
+                    <label for="url" class="block mb-2 font-semibold text-gray-600">目標網址:</label>
+                    <input type="url" id="url" name="url" required placeholder="https://example.com" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-sky-400" />
+                </div>
+                <div>
+                    <label for="days" class="block mb-2 font-semibold text-gray-600">失效時間:</label>
+                    <select id="days" name="days" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-sky-400">
+                        <option value="0">永久</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-3 px-6 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg text-base transition-all hover:-translate-y-0.5">產生長連結</button>
+            </form>
+            
+            <div id="error" class="hidden mt-4 p-4 bg-red-100 border border-red-300 text-red-800 rounded-lg"></div>
+            
+            <div id="result" class="hidden mt-5 p-5 bg-emerald-50 border-2 border-emerald-500 rounded-lg">
+                <h3 class="text-lg font-bold text-emerald-700 mb-3">✅ 長連結產生成功！</h3>
+                <p class="font-semibold text-gray-700">目標網址:</p>
+                <div id="targetUrl" class="bg-gray-100 p-4 rounded-lg my-3 break-all border-2 border-gray-200 font-mono text-sm max-h-48 overflow-y-auto"></div>
+                
+                <p class="font-semibold text-gray-700">產生的長連結:</p>
+                <div id="longUrl" class="bg-gray-100 p-4 rounded-lg my-3 break-all border-2 border-gray-200 font-mono text-sm max-h-48 overflow-y-auto"></div>
+                <button class="mt-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors" onclick="copyToClipboard()">複製連結</button>
+                
+                <div id="linkStats" class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-gray-700"></div>
+            </div>
+            
+            <div class="mt-5 p-4 bg-sky-50 rounded-lg border-l-4 border-sky-400">
+                <h3 class="text-lg font-bold text-gray-700 mb-2">ℹ️ 編碼原理</h3>
+                <ul class="list-disc list-inside space-y-1 text-gray-600">
+                    <li><strong>i = 0，I = 1</strong> 用於二進制編碼</li>
+                    <li>目標URL會被編碼為二進制，然後轉換為 i/I 字串</li>
+                    <li>所有連結均為永久有效，無過期時間</li>
+                    <li>連結越長說明包含的資訊越多</li>
+                    <li>完全無需伺服器儲存，URL即資料</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🔍 解碼長連結</h2>
+            <div class="mb-5">
+                <label for="decodeUrl" class="block mb-2 font-semibold text-gray-600">輸入長連結進行解碼:</label>
+                <input type="text" id="decodeUrl" placeholder="https://domain.com/iiIiIiiIIiiiI..." class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-sky-400" />
+            </div>
+            <button onclick="decodeLongUrl()" class="w-full py-3 px-6 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg text-base transition-all hover:-translate-y-0.5">解碼連結</button>
+            
+            <div id="decodeResult" class="hidden mt-4 p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+                <h4 class="font-bold text-gray-700 mb-3">解碼結果:</h4>
+                <p class="mb-2"><strong>目標URL:</strong> <span id="decodedUrl" class="text-sky-600"></span></p>
+                <p class="mb-2"><strong>建立時間:</strong> <span id="decodedCreated"></span></p>
+                <p class="mb-2"><strong>失效時間:</strong> <span id="decodedExpires"></span></p>
+                <p class="mb-2"><strong>狀態:</strong> <span id="decodedStatus"></span></p>
+                <button id="redirectBtn" class="hidden mt-3 px-5 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-md transition-colors" onclick="redirectToTarget()">前往目標網址</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-2xl p-6 text-center">
+            <p class="text-gray-500 text-sm">
+                🌟 本專案已開源 | 
+                <a href="https://github.com/afoim/long_link_gen" target="_blank" class="text-sky-600 hover:text-sky-700 hover:underline">GitHub</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let currentDecodedUrl = '';
+
+        // 字串轉二進制
+        function stringToBinary(str) {
+            return str.split('').map(char => {
+                return char.charCodeAt(0).toString(2).padStart(8, '0');
+            }).join('');
+        }
+
+        // 二進制轉字串
+        function binaryToString(binary) {
+            const chunks = binary.match(/.{8}/g) || [];
+            return chunks.map(chunk => {
+                return String.fromCharCode(parseInt(chunk, 2));
+            }).join('');
+        }
+
+        // 二進制轉 i/I 編碼
+        function binaryToiI(binary) {
+            return binary.split('').map(bit => bit === '0' ? 'i' : 'I').join('');
+        }
+
+        // i/I 編碼轉二進制
+        function iIToBinary(iIString) {
+            return iIString.split('').map(char => char === 'i' ? '0' : '1').join('');
+        }
+
+        // 數字轉二進制（固定長度）
+        function numberToBinary(num, length = 32) {
+            return num.toString(2).padStart(length, '0');
+        }
+
+        // 二進制轉數字
+        function binaryToNumber(binary) {
+            return parseInt(binary, 2);
+        }
+
+        // 編碼URL和時間戳（永久連結）
+        function encodeUrlWithTimestamp(url, days) {
+            const now = Date.now();
+            
+            // 將資料打包（永久連結）
+            const data = {
+                url: url,
+                created: now,
+                expires: null,
+                permanent: true
+            };
+            
+            const jsonData = JSON.stringify(data);
+            console.log('要編碼的資料:', jsonData);
+            
+            // 轉換為二進制
+            const binary = stringToBinary(jsonData);
+            console.log('二進制長度:', binary.length);
+            
+            // 轉換為 i/I 編碼
+            const encoded = binaryToiI(binary);
+            console.log('編碼長度:', encoded.length);
+            
+            return {
+                encoded: encoded,
+                data: data
+            };
+        }
+
+        // 解碼 i/I 字串
+        function decodeFromiI(iIString) {
+            try {
+                // 轉換為二進制
+                const binary = iIToBinary(iIString);
+                
+                // 轉換為字串
+                const jsonString = binaryToString(binary);
+                
+                // 解析JSON
+                const data = JSON.parse(jsonString);
+                
+                return data;
+            } catch (error) {
+                console.error('解碼失敗:', error);
+                return null;
+            }
+        }
+
+        // 產生路徑分段（保持URL長度最大化）
+        function generateSegmentedPath(encoded) {
+            const segments = [];
+            const maxSegmentLength = 255; // URL段最大長度
+            
+            for (let i = 0; i < encoded.length; i += maxSegmentLength) {
+                segments.push(encoded.substr(i, maxSegmentLength));
+            }
+            
+            return segments.join('/');
+        }
+
+        // 從分段路徑中提取編碼
+        function extractEncodedFromPath(path) {
+            return path.replace(/\//g, '');
+        }
+
+        // 表單提交處理
+        document.getElementById('linkForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value;
+            const days = parseInt(document.getElementById('days').value);
+            
+            if (!url) {
+                showError('請輸入有效的URL');
+                return;
+            }
+            
+            try {
+                // 編碼URL
+                const result = encodeUrlWithTimestamp(url, days);
+                
+                // 產生分段路徑
+                const segmentedPath = generateSegmentedPath(result.encoded);
+                
+                // 建構完整URL
+                const domain = '20080805.xyz';
+                const longUrl = `https://${domain}/${segmentedPath}`;
+                
+                // 顯示結果
+                document.getElementById('targetUrl').textContent = url;
+                document.getElementById('longUrl').textContent = longUrl;
+                document.getElementById('linkStats').innerHTML = `
+                    <p>📅 建立時間: ${new Date(result.data.created).toLocaleString()}</p>
+                    <p>⏰ 失效時間: 永久有效</p>
+                    <p>🔗 連結長度: ${longUrl.length} 字元</p>
+                    <p>📊 編碼長度: ${result.encoded.length} 字元</p>
+                    <p>💾 原始資料: ${JSON.stringify(result.data).length} 位元組</p>
+                `;
+                
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                
+                // 儲存當前URL用於複製
+                window.currentLongUrl = longUrl;
+                
+            } catch (error) {
+                showError('編碼失敗: ' + error.message);
+            }
+        });
+
+        // 解碼長連結
+        function decodeLongUrl() {
+            const input = document.getElementById('decodeUrl').value.trim();
+            
+            if (!input) {
+                alert('請輸入要解碼的長連結');
+                return;
+            }
+            
+            try {
+                // 提取路徑部分
+                const url = new URL(input);
+                const path = url.pathname.substring(1); // 移除開頭的 /
+                
+                if (!path) {
+                    alert('無效的URL路徑');
+                    return;
+                }
+                
+                // 提取編碼
+                const encoded = extractEncodedFromPath(path);
+                console.log('提取的編碼:', encoded.substring(0, 50) + '...');
+                
+                // 解碼
+                const decoded = decodeFromiI(encoded);
+                
+                if (!decoded) {
+                    alert('解碼失敗，可能是無效的編碼');
+                    return;
+                }
+                
+                // 顯示結果（永久連結）
+                document.getElementById('decodedUrl').textContent = decoded.url;
+                document.getElementById('decodedCreated').textContent = new Date(decoded.created).toLocaleString();
+                document.getElementById('decodedExpires').textContent = '永久有效';
+                document.getElementById('decodedStatus').textContent = '有效';
+                document.getElementById('decodedStatus').style.color = 'green';
+                
+                // 設定重定向按鈕（永久連結始終可用）
+                currentDecodedUrl = decoded.url;
+                document.getElementById('redirectBtn').style.display = 'inline-block';
+                
+                document.getElementById('decodeResult').style.display = 'block';
+                
+            } catch (error) {
+                alert('解碼失敗: ' + error.message);
+                console.error('解碼錯誤:', error);
+            }
+        }
+
+        // 重定向到目標URL
+        function redirectToTarget() {
+            if (currentDecodedUrl) {
+                window.open(currentDecodedUrl, '_blank');
+            }
+        }
+
+        // 複製到剪貼簿
+        function copyToClipboard() {
+            if (window.currentLongUrl) {
+                navigator.clipboard.writeText(window.currentLongUrl).then(function() {
+                    alert('連結已複製到剪貼簿！');
+                }).catch(function() {
+                    // 降級方案
+                    const textArea = document.createElement('textarea');
+                    textArea.value = window.currentLongUrl;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    alert('連結已複製到剪貼簿！');
+                });
+            }
+        }
+
+        // 顯示錯誤
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+        }
+
+        // 頁面載入時的自動解碼和跳轉功能
+        window.addEventListener('load', function() {
+            const currentUrl = window.location.href;
+            const urlPath = window.location.pathname;
+            
+            // 如果當前頁面URL包含編碼路徑，自動解碼並跳轉
+            if (urlPath && urlPath !== '/' && urlPath.length > 10) {
+                try {
+                    // 提取路徑部分
+                    const path = urlPath.substring(1); // 移除開頭的 /
+                    
+                    // 提取編碼
+                    const encoded = extractEncodedFromPath(path);
+                    
+                    // 解碼
+                    const decoded = decodeFromiI(encoded);
+                    
+                    if (decoded && decoded.url) {
+                        // 永久連結，直接跳轉
+                        window.location.href = decoded.url;
+                        return;
+                    }
+                } catch (error) {
+                    // 解碼失敗，顯示404頁面
+                    document.body.innerHTML = `
+                        <div class="min-h-screen bg-sky-500 flex items-center justify-center p-4">
+                            <div class="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md">
+                                <h1 class="text-2xl font-bold text-red-600 mb-4">❌ 連結無效</h1>
+                                <p class="text-gray-600 mb-6">抱歉，您訪問的連結無效或已損壞。</p>
+                                <button onclick="window.location.href='/'" class="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors">產生新連結</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
